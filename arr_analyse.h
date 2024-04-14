@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#define N 3 // Size of the square matrix defined for finding eigen values and gaussian elimination
+
 #define ALLOC(p, n)                                         \
     do                                                      \
     {                                                       \
@@ -18,6 +20,296 @@
 int size(int *arr)
 {
     int out = sizeof(arr) / sizeof(arr[0]);
+}
+
+void gaussian_elimination(double A[N][N+1]) {
+    for (int i = 0; i < N; i++) {
+        // Find pivot for this column
+        double max_val = 0.0;
+        int max_row = i;
+        for (int k = i; k < N; k++) {
+            if (abs(A[k][i]) > max_val) {
+                max_val = abs(A[k][i]);
+                max_row = k;
+            }
+        }
+
+        // Swap maximum row with current row (if needed)
+        if (max_row != i) {
+            for (int k = i; k < N+1; k++) {
+                double temp = A[i][k];
+                A[i][k] = A[max_row][k];
+                A[max_row][k] = temp;
+            }
+        }
+
+        // Make all rows below this one 0 in current column
+        for (int k = i+1; k < N; k++) {
+            double factor = A[k][i] / A[i][i];
+            for (int j = i; j < N+1; j++) {
+                A[k][j] -= factor * A[i][j];
+            }
+        }
+    }
+}
+
+// Function to back-substitute to find the solution
+void back_substitute(double A[N][N+1], double x[N]) {
+    for (int i = N-1; i >= 0; i--) {
+        x[i] = A[i][N];
+        for (int j = i+1; j < N; j++) {
+            x[i] -= A[i][j] * x[j];
+        }
+        x[i] /= A[i][i];
+    }
+}
+
+// Function to solve a system of linear equations
+void solve(double A[N][N], double b[N], double x[N]) {
+    // Augment matrix A with vector b
+    double augmented[N][N+1];
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            augmented[i][j] = A[i][j];
+        }
+        augmented[i][N] = b[i];
+    }
+
+    // Perform Gaussian elimination
+    gaussian_elimination(augmented);
+
+    // Back-substitute to find the solution
+    back_substitute(augmented, x);
+}
+
+double dot_product(double *a, double *b, int n) {
+    double result = 0.0;
+    for (int i = 0; i < n; i++) {
+        result += a[i] * b[i];
+    }
+    return result;
+}
+
+// Function to normalize a vector
+void normalize(double *v, int n) {
+    double norm = sqrt(dot_product(v, v, n));
+    for (int i = 0; i < n; i++) {
+        v[i] /= norm;
+    }
+}
+
+// Function to calculate the eigenvalues and eigenvectors of a matrix
+void eig(double A[N][N], double eigenvalues[N], double eigenvectors[N][N]) {
+    // Initialize eigenvectors matrix as identity matrix
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            eigenvectors[i][j] = (i == j) ? 1.0 : 0.0;
+        }
+    }
+
+    // Power iteration method
+    int max_iterations = 1000;
+    double epsilon = 1e-6;
+    for (int k = 0; k < N; k++) {
+        double x[N] = {1.0}; // Initial guess for eigenvector
+        double lambda_old = 0.0;
+
+        for (int iter = 0; iter < max_iterations; iter++) {
+            double y[N];
+            for (int i = 0; i < N; i++) {
+                y[i] = 0.0;
+                for (int j = 0; j < N; j++) {
+                    y[i] += A[i][j] * x[j];
+                }
+            }
+
+            // Calculate eigenvalue
+            double lambda = dot_product(y, x, N);
+            if (fabs(lambda - lambda_old) < epsilon) {
+                eigenvalues[k] = lambda;
+                break;
+            }
+            lambda_old = lambda;
+
+            // Normalize eigenvector
+            normalize(y, N);
+
+            // Update eigenvector
+            for (int i = 0; i < N; i++) {
+                x[i] = y[i];
+                eigenvectors[i][k] = x[i];
+            }
+        }
+    }
+}
+
+void matrixmultiply(int n,int c,int m,int a[n][c],int b[c][m])
+{
+  int ans[n][m];
+  for(int i=0;i<n;i++)
+  {
+    for(int j=0;j<m;j++)
+    {
+      int sum = 0;
+      for(int k=0;k<c;k++)
+      {
+        sum += a[i][k]*b[k][j];
+      }
+      ans[i][j] = sum;
+    }
+  }
+  printf("the multiplication matrix is : \n");
+  for(int i=0;i<n;i++)
+  {
+    for(int j=0;j<m;j++)
+    {
+      printf("%d ",ans[i][j]);
+    }
+    printf("\n");
+  }
+
+}
+void diagflat(int n,int a[],int offset)
+{
+  int x = offset;
+  if(x<0)
+  {
+    x = -x;
+  }
+  int m = n+x;
+  int ans[m][m];
+  for(int i=0;i<m;i++)
+  {
+    for(int j=0;j<m;j++)
+    {
+      ans[i][j] = 0;
+    }
+  }
+  if(offset>=0)
+  {
+    for(int i=0;i<m-offset;i++)
+    {
+      ans[i][i+offset] = a[i];
+    }
+  }
+  else
+  {
+    int pnt = 0;
+    for(int i=x;i<m;i++)
+    {
+      ans[i][i+offset] = a[pnt];
+      pnt++;
+    }
+  }
+  printf("the diagflat matrix is : \n");
+  for(int i=0;i<m;i++)
+  {
+    for(int j=0;j<m;j++)
+    {
+      printf("%d ",ans[i][j]);
+    }
+    printf("\n");
+  }
+
+}
+
+int value_of_poly(int *arr, int degree, int x)
+{
+    int n = degree;
+    int value = 0;
+
+    int i = 0, j = 0, temp;
+    while (i < (n + 1))
+    {
+        temp = arr[i];
+        while (j <= n - i)
+        {
+            temp *= x;
+            j++;
+        }
+        value += temp;
+        i++;
+    }
+    return value;
+}
+
+
+void trace(long long n,long long a[][n])
+{
+    long long trace = 0;
+    for(long long i=0;i<n;i++)
+    {
+        trace += a[i][i];
+    }
+    printf("the trace of the martix is %ld\n",trace);
+}
+
+void triu(long long n,long long a[][n])
+{
+    printf("the upper triangular matrix is :\n");
+    
+    long long triu[n][n];
+    for(long long i=0;i<n;i++)
+    {
+        for(long long j=0;j<n;j++)
+        {
+          if(i>=j)
+          {
+            triu[i][j] = a[i][j];
+          }
+          else
+          {
+            triu[i][j] = 0;
+          }
+        }
+    }
+
+    for(long long i=0;i<n;i++)
+    {
+        for(long long j=0;j<n;j++)
+        {
+            printf("%ld ",triu[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+void tril(long long n,long long a[][n])
+{
+    printf("the lower triangular matrix is :\n");
+    
+    long long tril[n][n];
+    int i =0, j =0;
+    while(i<n)
+    {
+        while(j<n)
+        {
+          if(i>=j)
+          {
+            tril[i][j] = 0;
+          }
+          else
+          {
+            tril[i][j] = a[i][j];
+          }
+            j++;
+        }
+        i++;
+    }
+
+    i = 0;
+    j = 0;
+    while(i<n)
+    {
+        while(j<n)
+        {
+            printf("%ld ",tril[i][j]);
+            j++;
+        }
+        printf("\n");
+        i++;
+    }
+  
 }
 
 // To create a function to calculate the length of an array
@@ -52,6 +344,96 @@ int dimension(void *arr)
         return dim;
     else
         return -1;
+}
+
+// Bubble sort function
+void bubbleSort(int arr[], int n)
+{
+    int i = 0;
+    while (i < n - 1)
+    {
+        int j = 0;
+        while (j < n - i - 1)
+        {
+            if (arr[j] > arr[j + 1])
+            {
+                // swap arr[j] and arr[j+1]
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+            j++;
+        }
+        i++;
+    }
+}
+
+// Insertion sort function
+void insertionSort(int arr[], int n)
+{
+    int i = 1;
+    while (i < n)
+    {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key)
+        {
+            arr[j + 1] = arr[j];
+            j = j - 1;
+        }
+        arr[j + 1] = key;
+        i++;
+    }
+}
+
+// Selection sort function
+void selectionSort(int arr[], int n)
+{
+    int i = 0;
+    while (i < n - 1)
+    {
+        int minIndex = i;
+        int j = i + 1;
+        while (j < n)
+        {
+            if (arr[j] < arr[minIndex])
+            {
+                minIndex = j;
+            }
+            j++;
+        }
+        // swap arr[i] and arr[minIndex]
+        int temp = arr[i];
+        arr[i] = arr[minIndex];
+        arr[minIndex] = temp;
+        i++;
+    }
+}
+
+// Function to input arrays
+void exampleArrays(int numArrays)
+{
+    int i, j, n;
+
+    for (i = 0; i < numArrays; i++)
+    {
+        printf("Enter the size of array %d: ", i + 1);
+        scanf("%d", &n);
+
+        int arr[n];
+        printf("Enter %d elements for array %d: ", n, i + 1);
+        for (j = 0; j < n; j++)
+        {
+            scanf("%d", &arr[j]);
+        }
+
+        printf("Array %d: ", i + 1);
+        for (j = 0; j < n; j++)
+        {
+            printf("%d ", arr[j]);
+        }
+        printf("\n");
+    }
 }
 
 // To create a function to determine the shape of an array
